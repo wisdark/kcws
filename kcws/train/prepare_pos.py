@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-# @Author: Koth Chen
-# @Date:   2016-10-15 14:49:40
+# @Author: Koth
+# @Date:   2017-01-25 11:46:37
 # @Last Modified by:   Koth
-# @Last Modified time: 2016-12-09 20:33:30
+# @Last Modified time: 2017-01-25 12:05:16
+
 import sys
 import os
 
@@ -21,21 +22,11 @@ def processToken(token, collect, out, end):
     nn = nn - 1
 
   token = token[:nn - 1].strip()
-  ustr = unicode(token.decode('utf8'))
-  for u in ustr:
-    collect.append(u)
-  uline = u''
-  if token == '。' or end:
-    if len(collect) > maxLen:
-      longLine += 1
-    totalLine += 1
-    for s in collect:
-      if uline:
-        uline = uline + u" " + s
-      else:
-        uline = s
-    out.write("%s\n" % (str(uline.encode('utf8'))))
-    del collect[:]
+  if not token:
+    return
+  out.write("%s " % (token))
+  if end:
+    out.write("\n")
 
 
 def processLine(line, out):

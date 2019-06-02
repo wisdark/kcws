@@ -2,11 +2,11 @@ licenses(["notice"])
 
 package(default_visibility = ["//visibility:public"])
 
-package_name = "glog"
 package_version = "0.3.4"
 
-package_file = package_name + "-" + package_version + ".tar.gz"
-package_dir = package_name + "-" + package_version
+package_file = "glog-" + package_version + ".tar.gz"
+
+package_dir = "glog-" + package_version
 
 genrule(
     name = "glog-srcs",
@@ -29,7 +29,7 @@ genrule(
         "cd $$TMP_DIR",
         "tar xfz " + package_file,
         "cd " + package_dir,
-        "./configure --prefix=$$INSTALL_DIR --enable-shared=no --with-pic=yes",
+        "CPPFLAGS=\"-D_GLIBCXX_USE_CXX11_ABI=0\" ./configure --prefix=$$INSTALL_DIR --enable-shared=no --with-pic=yes",
         "make install",
         "rm -rf $$TMP_DIR",
     ]),
@@ -39,15 +39,11 @@ cc_library(
     name = "glog-cxx",
     srcs = [
         "empty.cc",
-        "lib/libglog.a",
         "include/glog/log_severity.h",
         "include/glog/raw_logging.h",
         "include/glog/stl_logging.h",
         "include/glog/vlog_is_on.h",
-    ],
-    deps = [
-      "//third_party/gflags:gflags-cxx",
-
+        "lib/libglog.a",
     ],
     hdrs = [
         "include/glog/logging.h",
@@ -55,12 +51,15 @@ cc_library(
     includes = [
         "include",
     ],
-    linkstatic = 1,
+    # linkstatic = 1,
+    deps = [
+        "//third_party/gflags:gflags-cxx",
+    ],
 )
 
 filegroup(
     name = "glog",
     srcs = [
         ":glog-cxx",
-    ]
+    ],
 )

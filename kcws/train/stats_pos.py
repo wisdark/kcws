@@ -1,66 +1,48 @@
 # -*- coding: utf-8 -*-
-# @Author: Koth Chen
-# @Date:   2016-10-21 16:17:53
+# @Author: Koth
+# @Date:   2017-01-25 14:55:00
 # @Last Modified by:   Koth
-# @Last Modified time: 2017-01-25 16:54:11
+# @Last Modified time: 2017-04-07 22:12:33
 
 import sys
 import os
-import w2v
-from sentence import Sentence
 
 totalLine = 0
 longLine = 0
+maxLen = 80
+posMap = {}
 
-MAX_LEN = 80
-totalChars = 0
 
-
-def processToken(token, sentence, out, end, vob):
+def processToken(token, collect, out, end):
     global totalLine
     global longLine
-    global totalChars
-    global MAX_LEN
+    global maxLen
+    global posMap
     nn = len(token)
+    oline = token
     while nn > 0 and token[nn - 1] != '/':
         nn = nn - 1
-
+    pos = token[nn:]
     token = token[:nn - 1].strip()
-    if token != '。':
-        ustr = unicode(token.decode('utf8'))
-        sentence.addToken(ustr)
-    uline = u''
-    if token == '。' or end:
-        if sentence.chars > MAX_LEN:
-            longLine += 1
-        else:
-            x = []
-            y = []
-            totalChars += sentence.chars
-            sentence.generate_tr_line(x, y, vob)
-            nn = len(x)
-            assert (nn == len(y))
-            for j in range(nn, MAX_LEN):
-                x.append(0)
-                y.append(0)
-            line = ''
-            for i in range(MAX_LEN):
-                if i > 0:
-                    line += " "
-                line += str(x[i])
-            for j in range(MAX_LEN):
-                line += " " + str(y[j])
-            out.write("%s\n" % (line))
-        totalLine += 1
-        sentence.clear()
+    if not token:
+        return
+    if (not pos[0:1].isalpha()) or pos[0:1].isupper():
+        return
+    if len(pos) > 2:
+        pos = pos[:2]
+    posMap.setdefault(pos, 0)
+    posMap[pos] += 1
+    out.write("%s %s\t" % (token, pos))
+    if end:
+        out.write("\n")
 
 
-def processLine(line, out, vob):
+def processLine(line, out):
     line = line.strip()
     nn = len(line)
     seeLeftB = False
     start = 0
-    sentence = Sentence()
+    collect = []
     try:
         for i in range(nn):
             if line[i] == ' ':
@@ -73,9 +55,9 @@ def processLine(line, out, vob):
                         token = token[1:tokenLen - 1]
                         ss = token.split(' ')
                         for s in ss:
-                            processToken(s, sentence, out, False, vob)
+                            processToken(s, collect, out, False)
                     else:
-                        processToken(token, sentence, out, False, vob)
+                        processToken(token, collect, out, False)
                     start = i + 1
             elif line[i] == '[':
                 seeLeftB = True
@@ -91,10 +73,10 @@ def processLine(line, out, vob):
                 ss = token.split(' ')
                 ns = len(ss)
                 for i in range(ns - 1):
-                    processToken(ss[i], sentence, out, False, vob)
-                processToken(ss[-1], sentence, out, True, vob)
+                    processToken(ss[i], collect, out, False)
+                processToken(ss[-1], collect, out, True)
             else:
-                processToken(token, sentence, out, True, vob)
+                processToken(token, collect, out, True)
     except Exception as e:
         pass
 
@@ -102,29 +84,30 @@ def processLine(line, out, vob):
 def main(argc, argv):
     global totalLine
     global longLine
-    global totalChars
+    global posMap
     if argc < 4:
-        print("Usage:%s <vob> <dir> <output>" % (argv[0]))
+        print("Usage:%s <dir> <pos_vob_out> <for_train_out>" % (argv[0]))
         sys.exit(1)
-    vobPath = argv[1]
-    rootDir = argv[2]
-    vob = w2v.Word2vecVocab()
-    vob.Load(vobPath)
+    rootDir = argv[1]
     out = open(argv[3], "w")
+    tagvobFp = open(argv[2], "w")
     for dirName, subdirList, fileList in os.walk(rootDir):
         curDir = os.path.join(rootDir, dirName)
         for file in fileList:
             if file.endswith(".txt"):
                 curFile = os.path.join(curDir, file)
-                #print("processing:%s" % (curFile))
                 fp = open(curFile, "r")
                 for line in fp.readlines():
                     line = line.strip()
-                    processLine(line, out, vob)
+                    processLine(line, out)
                 fp.close()
     out.close()
-    print("total:%d, long lines:%d, chars:%d" %
-          (totalLine, longLine, totalChars))
+    print("total:%d, long lines:%d" % (totalLine, longLine))
+    print("total pos tags:%d" % (len(posMap)))
+    idx = 0
+    for k, v in posMap.iteritems():
+        tagvobFp.write("%s\t%d\n" % (k, idx + 1))
+        idx += 1
 
 
 if __name__ == '__main__':

@@ -2,16 +2,17 @@ licenses(["notice"])
 
 package(default_visibility = ["//visibility:public"])
 
-package_name = "gflags"
+
 package_version = "2.0"
 
-package_file = package_name + "-" + package_version + ".tar.gz"
-package_dir = package_name + "-" + package_version
+package_file =  "gflags-" + package_version + ".tar.gz"
+
+package_dir = "gflags-" + package_version
 
 genrule(
     name = "gflags-srcs",
     srcs = [
-        package_file, 
+        package_file,
     ],
     outs = [
         "include/gflags/gflags.h",
@@ -30,7 +31,7 @@ genrule(
         "cd $$TMP_DIR",
         "tar xfz " + package_file,
         "cd " + package_dir,
-        "./configure --prefix=$$INSTALL_DIR  --with-pic=yes --enable-shared=no",
+        "CPPFLAGS=\"-D_GLIBCXX_USE_CXX11_ABI=0\" ./configure --prefix=$$INSTALL_DIR  --with-pic=yes --enable-shared=no",
         "make install",
         "rm -rf $$TMP_DIR",
     ]),
@@ -39,8 +40,8 @@ genrule(
 cc_library(
     name = "gflags-cxx",
     srcs = [
-        "include/gflags/gflags_declare.h",
         "empty.cc",
+        "include/gflags/gflags_declare.h",
         "lib/libgflags.a",
     ],
     hdrs = [
@@ -49,12 +50,12 @@ cc_library(
     includes = [
         "include",
     ],
-    linkstatic = 1,
+    # linkstatic = 1,
 )
 
 filegroup(
     name = "gflags",
     srcs = [
         ":gflags-cxx",
-    ]
+    ],
 )

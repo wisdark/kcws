@@ -9,8 +9,8 @@
 #include <ctime>
 #include <random>
 #include <cmath>
-#include "basic_string_util.h"
-#include "word2vec_vob.h"
+#include "utils/basic_string_util.h"
+#include "utils/word2vec_vob.h"
 #include "base/base.h"
 // #include "re2/re2.h"
 namespace utils {
@@ -61,6 +61,7 @@ bool Word2vecVocab::Load(const std::string& path) {
   char *ptr = NULL;
   int tn = 0;
   float *  x2 = NULL;
+  std::string secondToken;
   while (fgets(line, sizeof(line) - 1, fp)) {
     int nn = strlen(line);
     while (nn && (line[nn - 1] == '\n' || line[nn - 1] == '\r')) {
@@ -98,9 +99,16 @@ bool Word2vecVocab::Load(const std::string& path) {
     }
     f_map_.insert(std::make_pair(word, WV()));
     std::vector<float>& features = f_map_[word].vect;
-    f_map_[word].idx = f_map_.size();
+    f_map_[word].idx = f_map_.size() - 1;
     if (static_cast<int>(f_map_.size()) == 1) {
-      CHECK((word == "</s>") || (word == "<unk>")) << "first tok should be </s> or <unk>";
+      CHECK(word == "</s>") << "first tok should be </s>";
+    } else if (static_cast<int>(f_map_.size()) == 2) {
+      secondToken = word;
+    }
+    if (word == "<UNK>") {
+      f_map_[word].idx = 1;
+      f_map_[secondToken].idx = f_map_.size() - 1;
+      secondToken = word;
     }
     for (int i = 1; i < nn; i++) {
       float fv = strtof(terms[i].c_str(), &ptr);
@@ -119,6 +127,7 @@ bool Word2vecVocab::Load(const std::string& path) {
       VLOG(0) << " f[" << i << "] avg:" << avg_vals_[i] << ",std:" << std_vals_[i];
     }
   }
+  CHECK(secondToken == "<UNK>") << "second token should be '<UNK>' ";
   if (x2)delete[] x2;
   fclose(fp);
   std::srand(std::time(0));
@@ -155,7 +164,7 @@ bool Word2vecVocab::GetVector(const std::string& word, std::vector<float>** vec,
       std::mt19937 gen(rd());
       for (int i = 0; i < f_dim_; i++) {
         std::normal_distribution<> d(avg_vals_[i], std_vals_[i]);
-        oov_feature_.push_back((float)d(gen));
+        oov_feature_.push_back(static_cast<float>(d(gen)));
       }
       *vec = &oov_feature_;
     } else {
@@ -164,7 +173,7 @@ bool Word2vecVocab::GetVector(const std::string& word, std::vector<float>** vec,
         std::mt19937 gen(rd());
         for (int i = 0; i < f_dim_; i++) {
           std::normal_distribution<> d(avg_vals_[i], std_vals_[i]);
-          oov_feature_.push_back((float)d(gen));
+          oov_feature_.push_back(static_cast<float>(d(gen)));
         }
       }
       *vec = &oov_feature_;
